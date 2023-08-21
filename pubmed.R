@@ -17,8 +17,9 @@ library(impactr)
 topicSearch<-function(query,max_results=5){
   res_search <- EUtilsSummary(query, type='esearch', db='pubmed')
   pmid_results<-res_search@PMID
-  #res_records<- EUtilsGet(res_search)
   res_records<- EUtilsGet(pmid_results[1:max_results])
+  
+  #parsing results into a data frame
   authors_list<-res_records@Author
   authors<-data.frame('Authors'=NA, 'First_Author'=NA, 'Pubmed_id'<-NA)
   if(length(authors_list) >=1 ){
@@ -38,7 +39,7 @@ topicSearch<-function(query,max_results=5){
     }
   }
   
-  
+  #Getting papers metadata
   res<-data.frame(pubmed_id = NA, doi = NA,publication_year = NA,
                   first_author= NA,authors = NA,
                   title = NA, volume = NA,issue = NA,first_page = NA,last_page = NA,
@@ -56,3 +57,25 @@ topicSearch<-function(query,max_results=5){
   return(res)
   
 }
+
+#search topic within time-frame
+topicSearchByDate<-function(query, max_results, year_min = 1995, year_end = 2023) {
+  
+  print(paste0('Awaiting Query: ', query, '...' ))
+  
+  search <- topicSearch(query,max_results)
+  
+  
+  
+  filtered_search<-search %>% filter(publication_year <= year_end,
+                                     publication_year >= year_min)
+  print(paste0(nrow(filtered_search), ' Results!'))
+  
+  return(filtered_search)
+  
+}
+
+#test
+queried_string<-'(pharmacokinetics OR hepatic clearance) AND (rodent OR mice) AND vivo'
+search_tox<-topicSearch(queried_string,max_results = 500)
+search_tox<-topicSearchByDate(queried_string, 999,1995,2023)
