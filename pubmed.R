@@ -13,243 +13,242 @@ library('plyr')
 #Functions
 
 #search some topic on PubMed
-topicSearch<-function(pubmed_id,max_results=5){
-  res_search <- EUtilsSummary(pubmed_id, type='esearch', db='pubmed')
-  pmid_results<-res_search@PMID
-  res_records<- EUtilsGet(pmid_results[1:max_results])
+topicSearch <- function(pubmed_id, max_results = 5) {
+  res_search <- EUtilsSummary(pubmed_id, type = 'esearch', db = 'pubmed')
+  pmid_results <- res_search@PMID
+  res_records <- EUtilsGet(pmid_results[1:max_results])
   
   #parsing results into a data frame
-  authors_list<-res_records@Author
-  authors<-data.frame('Authors'=NA, 'First_Author'=NA, 'Pubmed_id'<-NA)
-  if(length(authors_list) >=1 ){
-    for(i in 1:length(authors_list)){
-      publication_id<-names(authors_list)[[i]]
-      publication<-authors_list[[i]]
-      first_author<-paste0(publication['Author','LastName'],',',
-                           publication['Author','Initials'], ' et al.' )
-      all_authors<-c()
-      for(j in 1:nrow(publication)){
-        all_authors<-c(all_authors,
-                       paste0(publication[j,'LastName'],',',
-                              publication[j,'Initials']))
+  authors_list <- res_records@Author
+  authors <-
+    data.frame('Authors' = NA,
+               'First_Author' = NA,
+               'Pubmed_id' <- NA)
+  if (length(authors_list) >= 1) {
+    for (i in 1:length(authors_list)) {
+      publication_id <- names(authors_list)[[i]]
+      publication <- authors_list[[i]]
+      first_author <- paste0(publication['Author', 'LastName'], ',',
+                             publication['Author', 'Initials'], ' et al.')
+      all_authors <- c()
+      for (j in 1:nrow(publication)) {
+        all_authors <- c(all_authors,
+                         paste0(publication[j, 'LastName'], ',',
+                                publication[j, 'Initials']))
       }
-      all_authors<-paste(all_authors, collapse = ', ')
-      authors[i,]<-c(all_authors,first_author, publication_id)
+      all_authors <- paste(all_authors, collapse = ', ')
+      authors[i, ] <- c(all_authors, first_author, publication_id)
     }
   }
   
   #Getting papers metadata
-  res<-data.frame(pubmed_id = NA, doi = NA,publication_year = NA,
-                  first_author= NA,authors = NA,
-                  title = NA, volume = NA,issue = NA,first_page = NA,last_page = NA,
-                  ISSN = NA,Publication_type=NA,language = NA,abstract=NA)
-  for(i in 1:max_results){
-    temp_row<-c(res_records@PMID[i],res_records@DOI[i],res_records@YearPubDate[i],
-                first_author=authors$First_Author[i],
-                authors[i,'Authors'],res_records@ArticleTitle[i],
-                res_records@Volume[i],
-                res_records@Issue[i],NA, NA,
-                res_records@ISSN[i], res_records@PublicationType[i], res_records@Language[i],
-                res_records@AbstractText[i])
-    res[i,]<-temp_row
+  res <- data.frame(
+    pubmed_id = NA,
+    doi = NA,
+    publication_year = NA,
+    first_author = NA,
+    authors = NA,
+    title = NA,
+    volume = NA,
+    issue = NA,
+    first_page = NA,
+    last_page = NA,
+    ISSN = NA,
+    Publication_type = NA,
+    language = NA,
+    abstract = NA
+  )
+  for (i in 1:max_results) {
+    temp_row <-
+      c(
+        res_records@PMID[i],
+        res_records@DOI[i],
+        res_records@YearPubDate[i],
+        first_author = authors$First_Author[i],
+        authors[i, 'Authors'],
+        res_records@ArticleTitle[i],
+        res_records@Volume[i],
+        res_records@Issue[i],
+        NA,
+        NA,
+        res_records@ISSN[i],
+        res_records@PublicationType[i],
+        res_records@Language[i],
+        res_records@AbstractText[i]
+      )
+    res[i, ] <- temp_row
   }
   return(res)
   
 }
 
 #search topic within time-frame
-topicSearchByDate<-function(pubmed_id, max_results, year_min = 1995, year_end = 2023) {
-  
-  print(paste0('Awaiting pubmed_id: ', pubmed_id, '...' ))
-  
-  search <- topicSearch(pubmed_id,max_results)
-  
-  
-  
-  filtered_search<-search %>% filter(publication_year <= year_end,
-                                     publication_year >= year_min)
-  print(paste0(nrow(filtered_search), ' Results!'))
-  
-  return(filtered_search)
-  
-}
-
-#retrieve abstract of an article using pubmed_id
-getPubMedAbstract<-function(pubmed_id){
-  
-  #pubmed_id pubmed_id
-  res<-get_pubmed_ids(pubmed_id)
-  output <- fetch_pubmed_data(res,0,1, format = "xml")
-  
-  #write xml output
-  temp_filename<-"output.xml"
-  fileConn<-file(temp_filename)
-  writeLines(output, fileConn)
-  close(fileConn)
-  
-  #parse xml
-  read_ds<-read_xml(temp_filename) %>% as_list()
-  abstract_text<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Abstract"]]
-  abstract<-paste(unlist(abstract_text), collapse = ' ')
- 
-  return(abstract)
+topicSearchByDate <-
+  function(pubmed_id,
+           max_results,
+           year_min = 1995,
+           year_end = 2023) {
+    print(paste0('Awaiting pubmed_id: ', pubmed_id, '...'))
+    
+    search <- topicSearch(pubmed_id, max_results)
+    
+    
+    
+    filtered_search <- search %>% filter(publication_year <= year_end,
+                                         publication_year >= year_min)
+    print(paste0(nrow(filtered_search), ' Results!'))
+    
+    return(filtered_search)
+    
   }
 
-#retrieve article information using pubmed_id
-getPubMedInfo<-function(pubmed_id){
-  
+#retrieve abstract of an article using pubmed_id
+getPubMedAbstract <- function(pubmed_id) {
   #pubmed_id pubmed_id
-  res<-get_pubmed_ids(pubmed_id)
-  output <- fetch_pubmed_data(res,0,1, format = "xml")
+  res <- get_pubmed_ids(pubmed_id)
+  output <- fetch_pubmed_data(res, 0, 1, format = "xml")
   
   #write xml output
-  temp_filename<-"output.xml"
-  fileConn<-file(temp_filename)
+  temp_filename <- "output.xml"
+  fileConn <- file(temp_filename)
   writeLines(output, fileConn)
   close(fileConn)
   
   #parse xml
-  read_ds<-read_xml(temp_filename) %>% as_list()
-  abstract_text<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Abstract"]]
-  abstract<-paste(unlist(abstract_text), collapse = ' ')
-  journalTitle<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["Title"]][[1]]
-  journalIssue<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["JournalIssue"]][["Issue"]]
-  journalStartPage<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Pagination"]][["StartPage"]]
-  journalEndPage<-''
-  pub_Date<-unlist(read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["JournalIssue"]][["PubDate"]])
-  pub_Date<-paste(pub_Date, collapse = '-')
-  journalVolume<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["JournalIssue"]][["Volume"]]
-  authors<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["AuthorList"]]
-  articleTitle<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["ArticleTitle"]]
-  keywords<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["KeywordList"]]
-  keywords<-paste(unlist(keywords), collapse = '; ')
-  authors_df<-rbindlist(authors, fill=TRUE)
-  authors_df<-authors_df[,c("LastName","ForeName","Initials" )]
-  authors_matrix<-matrix(apply(authors_df, 1,paste,
-                               collapse=' '),ncol=1)
-  authors_formatted<-paste(authors_matrix[,1],collapse = '|')
+  read_ds <- read_xml(temp_filename) %>% as_list()
+  abstract_text <-
+    read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Abstract"]]
+  abstract <- paste(unlist(abstract_text), collapse = ' ')
   
-  info_df<-data.frame('Pubmed_id' = pubmed_id,
-                      'Article Title' = articleTitle[[1]],
-                      Authors = authors_formatted,
-                      Abstract = abstract, 
-                      'Journal Title' = journalTitle[[1]],
-                      'Journal Volume' = journalVolume[[1]], 
-                      'Journal Issue' = journalIssue[[1]], 
-                      'Start Page'= journalStartPage[[1]],
-                      'Publication Date' = pub_Date[[1]],
-                      Keywords = keywords
-                      )
+  return(abstract)
+}
+
+#retrieve article information using pubmed_id
+getPubMedInfo <- function(pubmed_id) {
+  #pubmed_id pubmed_id
+  res <- get_pubmed_ids(pubmed_id)
+  output <- fetch_pubmed_data(res, 0, 1, format = "xml")
+  
+  #write xml output
+  temp_filename <- "output.xml"
+  fileConn <- file(temp_filename)
+  writeLines(output, fileConn)
+  close(fileConn)
+  
+  #parse xml
+  read_ds <- read_xml(temp_filename) %>% as_list()
+  abstract_text <-
+    read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Abstract"]]
+  abstract <- paste(unlist(abstract_text), collapse = ' ')
+  journalTitle <-
+    read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["Title"]][[1]]
+  journalIssue <-
+    read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["JournalIssue"]][["Issue"]]
+  journalStartPage <-
+    read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Pagination"]][["StartPage"]]
+  journalEndPage <- ''
+  pub_Date <-
+    unlist(read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["JournalIssue"]][["PubDate"]])
+  pub_Date <- paste(pub_Date, collapse = '-')
+  journalVolume <-
+    read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["JournalIssue"]][["Volume"]]
+  authors <-
+    read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["AuthorList"]]
+  articleTitle <-
+    read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["ArticleTitle"]]
+  keywords <-
+    read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["KeywordList"]]
+  keywords <- paste(unlist(keywords), collapse = '; ')
+  authors_df <- rbindlist(authors, fill = TRUE)
+  authors_df <- authors_df[, c("LastName", "ForeName", "Initials")]
+  authors_matrix <- matrix(apply(authors_df, 1, paste,
+                                 collapse = ' '), ncol = 1)
+  authors_formatted <- paste(authors_matrix[, 1], collapse = '|')
+  
+  info_df <- data.frame(
+    'Pubmed_id' = pubmed_id,
+    'Article Title' = articleTitle[[1]],
+    Authors = authors_formatted,
+    Abstract = abstract,
+    'Journal Title' = journalTitle[[1]],
+    'Journal Volume' = journalVolume[[1]],
+    'Journal Issue' = journalIssue[[1]],
+    'Start Page' = journalStartPage[[1]],
+    'Publication Date' = pub_Date[[1]],
+    Keywords = keywords
+  )
   return(info_df)
   
 }
 
 #Accessing NCBI using  RISmed
-getPubMedInfo_via_rismed<-function(pubmed_id){
-  res_search <- EUtilsSummary(pubmed_id, type='esearch', db='pubmed')
-  res_records<- EUtilsGet(res_search)
+getPubMedInfo_via_rismed <- function(pubmed_id) {
+  res_search <- EUtilsSummary(pubmed_id, type = 'esearch', db = 'pubmed')
+  res_records <- EUtilsGet(res_search)
   
-  res<-data.frame(cbind(PMID(res_records),
-                        YearPpublish(res_records),
-                        Author(res_records),
-                        ISSN(res_records),
-                        Title(res_records),
-                        ArticleTitle(res_records),
-                        AbstractText(res_records),
-                        Affiliation(res_records),
-                        Language(res_records),
-                        PublicationType(res_records),
-                        #MedlineTA(res_records),
-                        #NlmUniqueID(res_records),
-                       # ISSNLinking(res_records),
-                       # PublicationStatus(res_records),
-                       # ArticleId(res_records),
-                        Issue(res_records),
-                        ISOAbbreviation(res_records),
-                        MedlinePgn(res_records),
-                        Country(res_records)))
+  authors <- Author(res_records)
+  authors_df <- authors[[1]][, c("LastName", "ForeName", "Initials")]
+  authors_matrix <- matrix(apply(authors_df, 1, paste,
+                                 collapse = ' '), ncol = 1)
+  authors_formatted <- paste(authors_matrix[, 1], collapse = '; ')
   
-  res<-as.data.frame(res)
-  #column names
-  colnames(res)<-c("PMID",
-                   "Year",
-                   "Author",
-                   "ISSN",
-                   "Title",
-                   "ArticleTitle",
-                   "AbstractText",
-                   "Affiliation",
-                   "Language",
-                   "PublicationType",
-                   "MedlineTA",
-                   "NlmUniqueID",
-                   "ISSNLinking",
-                   "PublicationStatus",
-                   "ArticleId",
-                   "Issue",
-                   "ISOAbbreviation",
-                   "MedlinePgn",
-                   "Country")
-  #rownames(res)<-res$PMID
+  
+  res <- data.frame(
+    PMID = PMID(res_records),
+    'Publication Year' = YearPpublish(res_records),
+    Authors =   authors_formatted,
+    ISSN =  ISSN(res_records),
+    Title = Title(res_records),
+    'Article Title' = ArticleTitle(res_records),
+    Abstract =  AbstractText(res_records),
+    'Publication Language' = Language(res_records),
+    'Publication Type' = PublicationType(res_records),
+    Issue = Issue(res_records),
+    'Journal Title'  =  ISOAbbreviation(res_records),
+    'Start Page' =  MedlinePgn(res_records),
+    Country = Country(res_records)
+  )
+  
+  
   return(res)
 }
 
 
 #batch downloads of pubed info
 #download xml/txt
-batchPubMedDownloads<-function(pubmed_id, batch_size, format_type, prefix){
-  path<-paste0('output/pubmed_id_',Sys.time(),'/')
-  dir.create(path, showWarnings = TRUE, recursive = FALSE, mode = "0777")
-  res<-batch_pubmed_download(pubmed_pubmed_id_string = pubmed_id,
-                             format = format_type,
-                             batch_size = batch_size,
-                             dest_file_prefix = paste0(path,prefix),
-                             encoding = "ASCII")
-  
-  
-  process_file<-function(pubmed_id, doi){
-    filename<-NA
-    filepath<-NA
-    output<-NA
-    article_title<-NA
-    pub_year<-NA
-    author<-NA
-    
-    if(is.na(pubmed_id) == F) {
-      #my_abstracts <- easyPubMed::fetch_pubmed_data(get_pubmed_ids(paste0(pubmed_id, ' [pmid]')),format = 'abstract')
-      my_abstracts <- easyPubMed::fetch_pubmed_data(get_pubmed_ids(paste0(pubmed_id, ' [pmid]')),format = 'txt')
-      
-      Sys.sleep(1)
-    }
-    else if(is.na(doi) == F) {
-      my_abstracts<- easyPubMed::fetch_pubmed_data(get_pubmed_ids(paste0(doi,' [doi]')),format = 'xml')
-    }
-    else { output <- NA }
-    # my_abstracts[my_abstracts == ""] <- "\n"
-    # my_abstracts<- cat(paste(my_abstracts[1:length(my_abstracts)], collapse = ""))
-    result <- xmlParse(file = 'output/test100001.xml')
-    result<-read_xml(my_abstracts)
+batchPubMedDownloads <-
+  function(pubmed_id,
+           batch_size,
+           format_type,
+           prefix) {
+    path <- paste0('output/pubmed_id_', Sys.time(), '/')
+    dir.create(path,
+               showWarnings = TRUE,
+               recursive = FALSE,
+               mode = "0777")
+    res <- batch_pubmed_download(
+      pubmed_pubmed_id_string = pubmed_id,
+      format = format_type,
+      batch_size = batch_size,
+      dest_file_prefix = paste0(path, prefix),
+      encoding = "ASCII"
+    )
     
     
-    
-    
-    
-    output<-paste0(pubmed_id,'_',pub_year,'_',author,'_',article_title)
-    if(nchar(output) > 240) output<-substr(output,1,240)
-    filename<-paste0(output,'.pdf')
-    filepath<-paste0(author,'/',pub_year,'/')
-    return(list(filepath, filename))
+ 
   }
-}
-process_pmid<-function(ids){
-  t<-batch_pubmed_download(ids, format = 'xml',
-                           batch_size = length(ids_list),
-                           dest_dir = 'output',
-                           dest_file_prefix = 'file_output_')
-  f<-list.files('output')
-  filename<-str_replace(f[1],'.txt','.xml')
-  file.rename(f[1],filename)
-  w<-xmlParse(file = paste0('output/',filename))
+process_pmid <- function(ids) {
+  t <- batch_pubmed_download(
+    ids,
+    format = 'xml',
+    batch_size = length(ids_list),
+    dest_dir = 'output',
+    dest_file_prefix = 'file_output_'
+  )
+  f <- list.files('output')
+  filename <- str_replace(f[1], '.txt', '.xml')
+  file.rename(f[1], filename)
+  w <- xmlParse(file = paste0('output/', filename))
   return(w)
 }
 
@@ -264,19 +263,25 @@ process_pmid<-function(ids){
 
 
 #retrieve pmid based on doi
-search_by_doi<-function(doi){
-  t<-get_pubmed_ids(doi)
-  res<-NA
-  new_row<-c()
-  if(length(t)>0) res<-t$IdList$Id[1]
-  if(is.na(res)==F){
-    new_row<-process_id(res)
+search_by_doi <- function(doi) {
+  t <- get_pubmed_ids(doi)
+  res <- NA
+  output<-NA
+  if (length(t) > 0)
+    res <- t$IdList$Id[1]
+  if (!is.na(res)) {
+    output <- getPubMedInfo(res)
   }
-  return(new_row)
+  return(output)
 }
 
 
+
+
 #test
-queried_string<-'(pharmacokinetics OR hepatic clearance) AND (rodent OR mice) AND vivo'
-search_tox<-topicSearch(queried_string,max_results = 500)
-search_tox<-topicSearchByDate(queried_string, 999,1995,2023)
+queried_string <-
+  '(pharmacokinetics OR hepatic clearance) AND (rodent OR mice) AND vivo'
+search_tox <- topicSearch(queried_string, max_results = 500)
+search_tox <- topicSearchByDate(queried_string, 999, 1995, 2023)
+pubs <- read.csv('input/pubmed.csv', header = T)
+doi_id <- '10.1016/j.hrtlng.2019.09.002'
