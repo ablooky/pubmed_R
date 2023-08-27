@@ -7,6 +7,7 @@ library(xml2)
 library(openxlsx)
 #library(methods)
 library(tidyverse)
+library(data.table)
 
 
 #Functions
@@ -73,6 +74,7 @@ topicSearchByDate<-function(query, max_results, year_min = 1995, year_end = 2023
   
 }
 
+#retrieve abstract of an article using pubmed_id
 getPubMedAbstract<-function(query){
   
   #query pubmed_id
@@ -93,36 +95,55 @@ getPubMedAbstract<-function(query){
   return(abstract)
   }
 
+#retrieve article information using pubmed_id
 getPubMedInfo<-function(query){
   
   #query pubmed_id
   res<-get_pubmed_ids(query)
-  #Retrieve abstract infotmation and parse it.
-  my_abstracts_txt <- fetch_pubmed_data(res,0,10, format = "xml")
-  my_abstracts_txt <- fetch_pubmed_data(res,0,10, format = "abstract")
-  f = system.file(my_abstracts_txt,'output.xml',package = 'XML')
-  read_ds<-read_xml('output.xml') %>% as_list()
+  output <- fetch_pubmed_data(res,0,1, format = "xml")
+  
+  #write xml output
+  temp_filename<-"output.xml"
+  fileConn<-file(temp_filename)
+  writeLines(output, fileConn)
+  close(fileConn)
+  
+  #parse xml
+  read_ds<-read_xml(temp_filename) %>% as_list()
+  abstract_text<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Abstract"]]
+  abstract<-paste(unlist(abstract_text), collapse = ' ')
   journalTitle<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["Title"]][[1]]
   journalIssue<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["JournalIssue"]][["Issue"]]
   journalStartPage<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Pagination"]][["StartPage"]]
   journalEndPage<-''
   pub_Date<-unlist(read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["JournalIssue"]][["PubDate"]])
+  pub_Date<-paste(pub_Date, collapse = '-')
   journalVolume<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Journal"]][["JournalIssue"]][["Volume"]]
-  authors<-''
+  authors<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["AuthorList"]]
   articleTitle<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["ArticleTitle"]]
-  abstract_text<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Abstract"]]
   keywords<-read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["KeywordList"]]
-  # read_ds2<-tibble::as_tibble(read_ds) %>% 
-  #   unnest_wider('PubmedArticleSet') %>%
-  #   unnest_longer('MedlineCitation') %>% 
-  #   unnest_wider('MedlineCitation', 
-  #                names_sep = '_', 
-  #                names_repair = 'unique')  %>%
-  # #  unnest(cols = names(.)) %>% 
-  #   unnest(cols = names(.)) %>% 
-  #   readr::type_convert()
-  # 
+  keywords<-paste(unlist(keywords), collapse = '; ')
+  authors_df<-rbindlist(authors, fill=TRUE)
+  authors_df<-authors_df[,c("LastName","ForeName","Initials" )]
+  authors_matrix<-matrix(apply(authors_df, 1,paste,
+                               collapse=' '),ncol=1)
+  authors_formatted<-paste(authors_matrix[,1],collapse = '|')
+  
+  info_df<-data.frame('Pubmed_id' = query,
+                      'Article Title' = articleTitle[[1]],
+                      Authors = authors_formatted,
+                      Abstract = abstract, 
+                      'Journal Title' = journalTitle[[1]],
+                      'Journal Volume' = journalVolume[[1]], 
+                      'Journal Issue' = journalIssue[[1]], 
+                      'Start Page'= journalStartPage[[1]],
+                      'Publication Date' = pub_Date[[1]],
+                      Keywords = keywords
+                      )
+  return(info_df)
+  
 }
+
 #test
 queried_string<-'(pharmacokinetics OR hepatic clearance) AND (rodent OR mice) AND vivo'
 search_tox<-topicSearch(queried_string,max_results = 500)
