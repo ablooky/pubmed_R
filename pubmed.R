@@ -13,7 +13,9 @@ library('plyr')
 #Functions
 
 #search some topic on PubMed
+#it is recommended to limit max_results to 999
 topicSearch <- function(pubmed_id, max_results = 5) {
+  
   res_search <- EUtilsSummary(pubmed_id, type = 'esearch', db = 'pubmed')
   pmid_results <- res_search@PMID
   res_records <- EUtilsGet(pmid_results[1:max_results])
@@ -83,6 +85,7 @@ topicSearch <- function(pubmed_id, max_results = 5) {
 }
 
 #search topic within time-frame
+#it is recommended to limit max_results to 999
 topicSearchByDate <-
   function(pubmed_id,
            max_results,
@@ -214,30 +217,37 @@ getPubMedInfo_via_rismed <- function(pubmed_id) {
 }
 
 
-#batch downloads of pubed info
-#download xml/txt
-batchPubMedDownloads <-
+#batch downloads of pubmed string search
+#download format_type can be 'xml', 'medline', 'abstract'
+#This is a slow query
+
+batchTopicSearch <-
   function(pubmed_id,
            batch_size,
            format_type,
            prefix) {
+    #Create a folder for  the output
     path <- paste0('output/pubmed_id_', Sys.time(), '/')
     dir.create(path,
                showWarnings = TRUE,
                recursive = FALSE,
                mode = "0777")
-    res <- batch_pubmed_download(
-      pubmed_pubmed_id_string = pubmed_id,
+    
+    
+    res <- easyPubMed::batch_pubmed_download(
+      pubmed_query_string = queried_string,
       format = format_type,
       batch_size = batch_size,
       dest_file_prefix = paste0(path, prefix),
       encoding = "ASCII"
     )
+    #readLines(res[1:30])
     
-    
+    return(res)
  
   }
-process_pmid <- function(ids) {
+
+batchPubmedSearch<-function(ids) {
   t <- batch_pubmed_download(
     ids,
     format = 'xml',
@@ -255,11 +265,8 @@ process_pmid <- function(ids) {
 
 # Perform searches
 
-#import data (the list of publications)into R.
-# pubs=read.csv("pubs.csv")
 
 
-#batchPubMedDownloads(pubmed_id = pubmed_id, 4999, 'xml','test')
 
 
 #retrieve pmid based on doi
@@ -283,5 +290,12 @@ queried_string <-
   '(pharmacokinetics OR hepatic clearance) AND (rodent OR mice) AND vivo'
 search_tox <- topicSearch(queried_string, max_results = 500)
 search_tox <- topicSearchByDate(queried_string, 999, 1995, 2023)
+
+
+#import data (the list of publications)into R.
 pubs <- read.csv('input/pubmed.csv', header = T)
 doi_id <- '10.1016/j.hrtlng.2019.09.002'
+batchDownloads(pubmed_id = queried_string, 
+               batch_size = 3000,
+               format = 'medline',
+               prefix = 'test_')
