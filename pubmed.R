@@ -3,12 +3,10 @@ library(RISmed)
 library(easyPubMed)
 library(XML)
 library(xml2)
-#library(qdap)
 library(openxlsx)
-#library(methods)
 library(tidyverse)
 library(data.table)
-library('plyr')
+library(plyr)
 
 #Functions
 
@@ -247,26 +245,28 @@ batchTopicSearch <-
  
   }
 
-batchPubmedSearch<-function(ids) {
-  t <- batch_pubmed_download(
-    ids,
-    format = 'xml',
-    batch_size = length(ids_list),
-    dest_dir = 'output',
-    dest_file_prefix = 'file_output_'
-  )
-  f <- list.files('output')
-  filename <- str_replace(f[1], '.txt', '.xml')
-  file.rename(f[1], filename)
-  w <- xmlParse(file = paste0('output/', filename))
-  return(w)
+
+#Batch pubmed ids search
+batchPmidSearch<-function(ids) {
+  
+  output_df<-data.frame()
+  failed_ids<-c()
+  for(i in ids){
+    print(i)
+    if(!is.na(i)){
+      try(
+        temp_df<-getPubMedInfo(i)
+      )
+      if(nrow(temp_df)){
+        output_df<-bind_rows(output_df,temp_df)
+      }else {
+        failed_ids<-c(i,failed_ids)
+      }
+    }
+  }
+  
+  return(list(output_df, failed_ids))
 }
-
-
-# Perform searches
-
-
-
 
 
 #retrieve pmid based on doi
@@ -283,19 +283,88 @@ search_by_doi <- function(doi) {
 }
 
 
+process_file <- function(file_uploaded) {
+  filename <- NA
+  filepath <- NA
+  output <- NA
+  article_title <- NA
+  pub_year <- NA
+  author <- NA
+  
+  uploaded_df<-read.csv(file_uploaded)
+  
+  for(r in 1:nrow(uploaded_df)){
+    pubmed_id<-uploaded_df[r,'pmid']
+    doi<-uploaded_df[r,'doi']
+    if (!is.na(pubmed_id)) {
+      output <-
+        easyPubMed::fetch_pubmed_data(get_pubmed_ids(paste0(pubmed_id, ' [pmid]')), format = 'txt')
+      
+    }
+    else if (!is.na(doi)) {
+      output <-
+        easyPubMed::fetch_pubmed_data(get_pubmed_ids(paste0(doi, ' [doi]')), format = 'xml')
+    }
+    else {
+      output <- NA
+    }
+    Sys.sleep(1)
+    if(r %% 100 == 0) {
+      print('Pausing...')
+      Sys.sleep(30)}
+  }
+  #write xml output
+  write_xml(output, file = "output/output.xml", 
+            options =c("format", "no_declaration"))
+  
+  temp_filename <- "output/output.xml"
+  fileConn <- file(temp_filename)
+  writeLines(output, fileConn)
+  close(fileConn)
+  
+  #parse xml
+  result <- xmlParse(file = 'output/output.xml')
+  result <- read_xml('output/output.xml')
+  read_ds<-read_xml(f) %>% as_list()
+  
+  
+  
+  
+  output <-
+    paste0(pubmed_id, '_', pub_year, '_', author, '_', article_title)
+  if (nchar(output) > 240)
+    output <- substr(output, 1, 240)
+  filename <- paste0(output, '.pdf')
+  filepath <- paste0(author, '/', pub_year, '/')
+  return(list(filepath, filename))
+}
 
-
-#test
-queried_string <-
-  '(pharmacokinetics OR hepatic clearance) AND (rodent OR mice) AND vivo'
-search_tox <- topicSearch(queried_string, max_results = 500)
-search_tox <- topicSearchByDate(queried_string, 999, 1995, 2023)
-
-
-#import data (the list of publications)into R.
-pubs <- read.csv('input/pubmed.csv', header = T)
-doi_id <- '10.1016/j.hrtlng.2019.09.002'
-batchDownloads(pubmed_id = queried_string, 
-               batch_size = 3000,
-               format = 'medline',
-               prefix = 'test_')
+#Test
+test_functions<-function(){
+  
+  ##topic search
+  queried_string <-
+    '(pharmacokinetics OR hepatic clearance) AND (rodent OR mice) AND vivo'
+  search_tox <- topicSearch(queried_string, max_results = 500)
+  search_tox <- topicSearchByDate(queried_string, 999, 1995, 2023)
+  
+  ##batch search
+  pubmed_ids<-c('19622023','10611141','10901708','15205386')
+  pubs <- read.csv('input/pubmed.csv', header = T)
+  results<-batchPmidSearch(pubs$PMID)
+  results[[1]]
+  failed_ids<-results[[2]]
+  
+  batchTopicSearch(pubmed_id = queried_string, 
+                   batch_size = 3000,
+                   format = 'medline',
+                   prefix = 'test_')
+  
+  ##search based on doi
+  doi_id <- '10.1016/j.hrtlng.2019.09.002'
+  doi_search<- search_by_doi(doi_id)
+  
+  
+  
+  
+}
