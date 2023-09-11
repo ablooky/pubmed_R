@@ -1,7 +1,6 @@
 #code to extract and format pubmed references from ncbi through R.
 library(RISmed)
 library(easyPubMed)
-#library(XML)
 library(xml2)
 library(openxlsx)
 library(tidyverse)
@@ -326,10 +325,6 @@ process_file <- function(file_uploaded) {
   result <- xmlParse(file = 'output/output.xml')
   result <- read_xml('output/output.xml')
   read_ds<-read_xml(f) %>% as_list()
-
-
-
-
   output <-
     paste0(pubmed_id, '_', pub_year, '_', author, '_', article_title)
   if (nchar(output) > 240)
@@ -368,4 +363,34 @@ test_functions<-function(){
 
 
 
+}
+
+deleteme<-function(){
+  #if(!dir.exists('output')) dir.create('output')
+  # result <- xmlParse(file = 'output/test100001.xml'
+  
+  
+  f = system.file(my_abstracts_txt,'output.xml',package = 'XML')
+  xmltodf<-xmlToDataFrame(f)
+  #parsed<-read_xml('output.txt')
+  parsed<-XML::xmlParse(temp_filename)
+  xml_data <- xmlToList(parsed)
+  xmltodf<-xmlToDataFrame(nodes=getNodeSet(my_abstracts_txt, "PubmedArticle"))
+  xmltodf<-xmlToDataFrame(nodes = xmlChildren(xmlRoot(parsed)))
+  
+  
+  read_ds<-read_xml('output.xml') %>% as_list()
+  # read_ds2<-tibble::as_tibble(read_ds) %>% 
+  #   unnest_wider('PubmedArticleSet') %>%
+  #   unnest_longer('MedlineCitation') %>% 
+  #   unnest_wider('MedlineCitation', 
+  #                names_sep = '_', 
+  #                names_repair = 'unique')  %>%
+  # #  unnest(cols = names(.)) %>% 
+  #   unnest(cols = names(.)) %>% 
+  #   readr::type_convert()
+  # 
+  #get pubmed_info for 1 id or a list
+  # pubmed_ids<-pmid_results
+  #results<-easyPubMed::get_pubmed_ids(query)
 }
