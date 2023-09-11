@@ -1,7 +1,7 @@
 #code to extract and format pubmed references from ncbi through R.
 library(RISmed)
 library(easyPubMed)
-library(XML)
+#library(XML)
 library(xml2)
 library(openxlsx)
 library(tidyverse)
@@ -13,11 +13,11 @@ library(plyr)
 #search some topic on PubMed
 #it is recommended to limit max_results to 999
 topicSearch <- function(pubmed_id, max_results = 5) {
-  
+
   res_search <- EUtilsSummary(pubmed_id, type = 'esearch', db = 'pubmed')
   pmid_results <- res_search@PMID
   res_records <- EUtilsGet(pmid_results[1:max_results])
-  
+
   #parsing results into a data frame
   authors_list <- res_records@Author
   authors <-
@@ -40,7 +40,7 @@ topicSearch <- function(pubmed_id, max_results = 5) {
       authors[i, ] <- c(all_authors, first_author, publication_id)
     }
   }
-  
+
   #Getting papers metadata
   res <- data.frame(
     pubmed_id = NA,
@@ -79,7 +79,7 @@ topicSearch <- function(pubmed_id, max_results = 5) {
     res[i, ] <- temp_row
   }
   return(res)
-  
+
 }
 
 #search topic within time-frame
@@ -90,52 +90,52 @@ topicSearchByDate <-
            year_min = 1995,
            year_end = 2023) {
     print(paste0('Awaiting pubmed_id: ', pubmed_id, '...'))
-    
+
     search <- topicSearch(pubmed_id, max_results)
-    
-    
-    
+
+
+
     filtered_search <- search %>% filter(publication_year <= year_end,
                                          publication_year >= year_min)
     print(paste0(nrow(filtered_search), ' Results!'))
-    
+
     return(filtered_search)
-    
+
   }
 
-#retrieve abstract of an article using pubmed_id
+# #retrieve abstract of an article using pubmed_id
 getPubMedAbstract <- function(pubmed_id) {
   #pubmed_id pubmed_id
   res <- get_pubmed_ids(pubmed_id)
   output <- fetch_pubmed_data(res, 0, 1, format = "xml")
-  
+
   #write xml output
   temp_filename <- "output.xml"
   fileConn <- file(temp_filename)
   writeLines(output, fileConn)
   close(fileConn)
-  
+
   #parse xml
   read_ds <- read_xml(temp_filename) %>% as_list()
   abstract_text <-
     read_ds[["PubmedArticleSet"]][["PubmedArticle"]][["MedlineCitation"]][["Article"]][["Abstract"]]
   abstract <- paste(unlist(abstract_text), collapse = ' ')
-  
+
   return(abstract)
 }
-
-#retrieve article information using pubmed_id
+# 
+# #retrieve article information using pubmed_id
 getPubMedInfo <- function(pubmed_id) {
   #pubmed_id pubmed_id
   res <- get_pubmed_ids(pubmed_id)
   output <- fetch_pubmed_data(res, 0, 1, format = "xml")
-  
+
   #write xml output
   temp_filename <- "output.xml"
   fileConn <- file(temp_filename)
   writeLines(output, fileConn)
   close(fileConn)
-  
+
   #parse xml
   read_ds <- read_xml(temp_filename) %>% as_list()
   abstract_text <-
@@ -165,7 +165,7 @@ getPubMedInfo <- function(pubmed_id) {
   authors_matrix <- matrix(apply(authors_df, 1, paste,
                                  collapse = ' '), ncol = 1)
   authors_formatted <- paste(authors_matrix[, 1], collapse = '|')
-  
+
   info_df <- data.frame(
     'Pubmed_id' = pubmed_id,
     'Article Title' = articleTitle[[1]],
@@ -179,21 +179,21 @@ getPubMedInfo <- function(pubmed_id) {
     Keywords = keywords
   )
   return(info_df)
-  
+
 }
 
-#Accessing NCBI using  RISmed
+# #Accessing NCBI using  RISmed
 getPubMedInfo_via_rismed <- function(pubmed_id) {
   res_search <- EUtilsSummary(pubmed_id, type = 'esearch', db = 'pubmed')
   res_records <- EUtilsGet(res_search)
-  
+
   authors <- Author(res_records)
   authors_df <- authors[[1]][, c("LastName", "ForeName", "Initials")]
   authors_matrix <- matrix(apply(authors_df, 1, paste,
                                  collapse = ' '), ncol = 1)
   authors_formatted <- paste(authors_matrix[, 1], collapse = '; ')
-  
-  
+
+
   res <- data.frame(
     PMID = PMID(res_records),
     'Publication Year' = YearPpublish(res_records),
@@ -209,16 +209,16 @@ getPubMedInfo_via_rismed <- function(pubmed_id) {
     'Start Page' =  MedlinePgn(res_records),
     Country = Country(res_records)
   )
-  
-  
+
+
   return(res)
 }
 
-
-#batch downloads of pubmed string search
-#download format_type can be 'xml', 'medline', 'abstract'
-#This is a slow query
-
+#
+# #batch downloads of pubmed string search
+# #download format_type can be 'xml', 'medline', 'abstract'
+# #This is a slow query
+#
 batchTopicSearch <-
   function(pubmed_id,
            batch_size,
@@ -230,8 +230,8 @@ batchTopicSearch <-
                showWarnings = TRUE,
                recursive = FALSE,
                mode = "0777")
-    
-    
+
+
     res <- easyPubMed::batch_pubmed_download(
       pubmed_query_string = queried_string,
       format = format_type,
@@ -240,15 +240,15 @@ batchTopicSearch <-
       encoding = "ASCII"
     )
     #readLines(res[1:30])
-    
+
     return(res)
- 
+
   }
-
-
-#Batch pubmed ids search
+#
+#
+# #Batch pubmed ids search
 batchPmidSearch<-function(ids) {
-  
+
   output_df<-data.frame()
   failed_ids<-c()
   for(i in ids){
@@ -264,12 +264,12 @@ batchPmidSearch<-function(ids) {
       }
     }
   }
-  
+
   return(list(output_df, failed_ids))
 }
-
-
-#retrieve pmid based on doi
+#
+#
+# #retrieve pmid based on doi
 search_by_doi <- function(doi) {
   t <- get_pubmed_ids(doi)
   res <- NA
@@ -281,8 +281,8 @@ search_by_doi <- function(doi) {
   }
   return(output)
 }
-
-
+#
+#
 process_file <- function(file_uploaded) {
   filename <- NA
   filepath <- NA
@@ -290,16 +290,16 @@ process_file <- function(file_uploaded) {
   article_title <- NA
   pub_year <- NA
   author <- NA
-  
+
   uploaded_df<-read.csv(file_uploaded)
-  
+
   for(r in 1:nrow(uploaded_df)){
     pubmed_id<-uploaded_df[r,'pmid']
     doi<-uploaded_df[r,'doi']
     if (!is.na(pubmed_id)) {
       output <-
         easyPubMed::fetch_pubmed_data(get_pubmed_ids(paste0(pubmed_id, ' [pmid]')), format = 'txt')
-      
+
     }
     else if (!is.na(doi)) {
       output <-
@@ -314,22 +314,22 @@ process_file <- function(file_uploaded) {
       Sys.sleep(30)}
   }
   #write xml output
-  write_xml(output, file = "output/output.xml", 
+  write_xml(output, file = "output/output.xml",
             options =c("format", "no_declaration"))
-  
+
   temp_filename <- "output/output.xml"
   fileConn <- file(temp_filename)
   writeLines(output, fileConn)
   close(fileConn)
-  
+
   #parse xml
   result <- xmlParse(file = 'output/output.xml')
   result <- read_xml('output/output.xml')
   read_ds<-read_xml(f) %>% as_list()
-  
-  
-  
-  
+
+
+
+
   output <-
     paste0(pubmed_id, '_', pub_year, '_', author, '_', article_title)
   if (nchar(output) > 240)
@@ -339,32 +339,33 @@ process_file <- function(file_uploaded) {
   return(list(filepath, filename))
 }
 
+
 #Test
 test_functions<-function(){
-  
+
   ##topic search
   queried_string <-
     '(pharmacokinetics OR hepatic clearance) AND (rodent OR mice) AND vivo'
   search_tox <- topicSearch(queried_string, max_results = 500)
   search_tox <- topicSearchByDate(queried_string, 999, 1995, 2023)
-  
+
   ##batch search
   pubmed_ids<-c('19622023','10611141','10901708','15205386')
   pubs <- read.csv('input/pubmed.csv', header = T)
   results<-batchPmidSearch(pubs$PMID)
   results[[1]]
   failed_ids<-results[[2]]
-  
-  batchTopicSearch(pubmed_id = queried_string, 
+
+  batchTopicSearch(pubmed_id = queried_string,
                    batch_size = 3000,
                    format = 'medline',
                    prefix = 'test_')
-  
+
   ##search based on doi
   doi_id <- '10.1016/j.hrtlng.2019.09.002'
   doi_search<- search_by_doi(doi_id)
-  
-  
-  
-  
+
+
+
+
 }
