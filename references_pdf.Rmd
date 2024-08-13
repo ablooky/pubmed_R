@@ -1,0 +1,18 @@
+---
+title: "Refered Publications"
+author: "Jon A. Arnot"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, tidy.opts=list(width.cutoff=80), tidy=TRUE)
+library(openxlsx)
+```
+
+
+```{r output}
+df<-read.xlsx('output.batchpmidsearch.xlsx')
+citations<-df$citation
+print(citations)
+```
