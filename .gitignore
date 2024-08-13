@@ -1,3 +1,6 @@
+input/arnot_pubs,csv 
+output.xml
+
 # History files
 .Rhistory
 .Rapp.history
