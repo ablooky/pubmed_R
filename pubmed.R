@@ -426,18 +426,21 @@ test_functions <- function() {
   pubmed_id <- 37443298
   
   #query by doi
-  dois <- c("10.1038/s41370-023-00582-6", 
-           '10.21037/jtd-2021-23', 
-           '10.1016/j.hrtlng.2019.09.002')
-  results <- search_by_doi(dois)
+  doi <- c("10.1038/s41370-023-00582-6")
+  results <- search_by_doi(doi)
   
   ##batch search
-  pubmed_ids <- c(37443298)
-  pubs <- read.csv('input/arnot_pubs.csv', header = T)
-  results <- batchPmidSearch(pubs$PMID)
+  pubmed_ids <- c(37443298, 
+                  34992839)
   results <- batchPmidSearch(pubmed_ids)
   sucess_df <- results[[1]]
   failed_ids <- results[[2]]
+  #upload document 
+  pubs <- read.csv('input/arnot_pubs.csv', header = T)
+  results <- batchPmidSearch(pubs$PMID)
+  sucess_df <- results[[1]]
+  failed_ids <- results[[2]]
+  
   
   batchTopicSearch(
     pubmed_id = queried_string,
@@ -445,10 +448,5 @@ test_functions <- function() {
     format = 'medline',
     prefix = 'test_'
   )
-  
-  
-  
-  
-  
-  
+
 }
