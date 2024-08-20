@@ -12,13 +12,11 @@ library(data.table)
 
 #search some topic on PubMed
 #it is recommended to limit max_results to 999
-topicSearch <- function(pubmed_id, max_results = 5) {
-  res_search <-
-    EUtilsSummary(pubmed_id, type = 'esearch', db = 'pubmed')
+topicSearch <- function(query = queried_string, pubmed_id, max_results = 5) {
+  res_search <-EUtilsSummary(query, type = 'esearch', db = 'pubmed')
   pmid_results <- res_search@PMID
   res_records <- EUtilsGet(pmid_results[1:max_results])
-  
-  return(res)
+  return(res_records)
   
 }
 
@@ -70,16 +68,27 @@ getPubMedInfo_via_rismed <- function(pubmed_id) {
 
 
 # Batch downloads of pubmed string search
-# #download format_type can be 'xml', 'medline', 'abstract', 'text'
-# #This is a slow query
-#
+# Download format_type can be 'xml', 'medline', 'abstract', 'text'
+# This is a slow query
+# pubmed_query_string: String (character-vector of length 1):
+# this is the string used for querying PubMed (the standard PubMed Query synthax applies).
+# dest_dir: file path required to  save results	
+# String (character-vector of length 1)
+# dest_file_prefix: String (character-vector of length 1):
+# this string is used as prefix for the files that are written locally.
+# format: String (character-vector of length 1):
+# Acceptable values are: c("medline","uilist","abstract","asn.1", "xml"). 
+# When format != "xml", data will be saved as text files (txt).
+# batch_size: Integer (1 < batch_size < 5000)
+# maximum number of records to be saved in a single xml or txt file.
 batchTopicSearch <-
-  function(pubmed_id,
-           batch_size = 9990,
+  function(queried_string,
+           batch_size = 5000,
            format_type = 'xml',
            prefix = 'record_') {
+    
     #Create a folder for  the output
-    path <- paste0('output/pubmed_id_', Sys.time(), '/')
+    path <- paste0('output/', Sys.time(), '/')
     dir.create(path,
                showWarnings = TRUE,
                recursive = FALSE,
