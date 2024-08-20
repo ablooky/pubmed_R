@@ -12,7 +12,8 @@ library(data.table)
 
 #search some topic on PubMed
 #it is recommended to limit max_results to 999
-topicSearch <- function(query = queried_string, pubmed_id, max_results = 5) {
+topicSearch <- function(query = queried_string, max_results = 100) {
+  print(paste0('Topic search: ', queried_string, '...'))
   res_search <-EUtilsSummary(query, type = 'esearch', db = 'pubmed')
   pmid_results <- res_search@PMID
   res_records <- EUtilsGet(pmid_results[1:max_results])
@@ -23,34 +24,26 @@ topicSearch <- function(query = queried_string, pubmed_id, max_results = 5) {
 #search topic within time-frame
 #it is recommended to limit max_results to 999
 topicSearchByDate <-
-  function(pubmed_id,
-           max_results,
+  function(query,
+           max_results = 100,
            year_min = 1995,
-           year_end = 2023) {
-    print(paste0('Awaiting pubmed_id: ', pubmed_id, '...'))
-    
-    search <- topicSearch(pubmed_id, max_results)
-    
-    
+           year_max = 2023) {
+    print(paste0('Topic search: ', queried_string, '...'))
+    print(paste0('Filtered search: ', year_min,'-',year_max,  '...'))
+    search <- topicSearch(query, max_results)
+    #format results here:
     
     filtered_search <-
       search %>% 
-      filter(publication_year <= year_end, publication_year >= year_min)
+      dplyr::filter(publication_year <= year_max, publication_year >= year_min)
     print(paste0(nrow(filtered_search), ' Results!'))
     
     return(filtered_search)
     
   }
 
-# #retrieve abstract of an article using pubmed_id
-getPubMedAbstract <- function(pubmed_id) {
-  #pubmed_id
-  res <- get_pubmed_ids(pubmed_id)
-  output <- fetch_pubmed_data(res, 0, 1, format = "xml")
-  return(output)
-}
-#
-# #retrieve article information using pubmed_id
+# Search by pubmed_id
+# Retrieve article information using pubmed_id
 getPubMedInfo <- function(pubmed_id) {
   #pubmed_id pubmed_id
   res <- get_pubmed_ids(pubmed_id)
@@ -58,14 +51,34 @@ getPubMedInfo <- function(pubmed_id) {
   return(output)
   
 }
-
-# #Accessing NCBI using  RISmed
+# Retrieve abstract of an article using pubmed_id
+getPubMedAbstract <- function(pubmed_id) {
+  #pubmed_id
+  res <- get_pubmed_ids(pubmed_id)
+  output <- fetch_pubmed_data(res, 0, 1, format = "xml")
+  return(output)
+}
+# Accessing NCBI using  RISmed
 getPubMedInfo_via_rismed <- function(pubmed_id) {
   res_search <-EUtilsSummary(pubmed_id, type = 'esearch', db = 'pubmed')
   res_records <- EUtilsGet(res_search)
   return(res)
 }
 
+# Search by doi
+# Retrieve pmid based on doi
+search_by_doi <- function(doi) {
+  results <- get_pubmed_ids(doi)
+  res <- NA
+  output <- NA
+  if (length(results) > 0)
+    res <- results$IdList$Id[1]
+  if (!is.na(res)) {
+    output <- getPubMedInfo(res)
+  }
+  return(output)
+}
+#Search by list of pubmed ids
 
 # Batch downloads of pubmed string search
 # Download format_type can be 'xml', 'medline', 'abstract', 'text'
@@ -107,7 +120,7 @@ batchTopicSearch <-
   }
 #
 #
-# #Batch pubmed ids search
+# Batch pubmed ids search
 batchPmidSearch <- function(ids) {
   output_df <- data.frame()
   failed_ids <- c()
@@ -128,18 +141,7 @@ batchPmidSearch <- function(ids) {
 }
 #
 #
-# #retrieve pmid based on doi
-search_by_doi <- function(doi) {
-  t <- get_pubmed_ids(doi)
-  res <- NA
-  output <- NA
-  if (length(t) > 0)
-    res <- t$IdList$Id[1]
-  if (!is.na(res)) {
-    output <- getPubMedInfo(res)
-  }
-  return(output)
-}
+
 #
 #
 process_file <- function(file_uploaded) {
@@ -416,10 +418,19 @@ format_results<-function(res){
 test_functions <- function() {
   ##topic search
   queried_string <-
-    '(pharmacokinetics OR hepatic clearance) AND (rodent OR mice) AND vivo'
-  search_tox <- topicSearch(queried_string, max_results = 500)
-  search_tox <- topicSearchByDate(queried_string, 999, 1995, 2023)
+    '(pharmacokinetics OR hepatic clearance OR toxicokinetics) AND (rodent OR mice) AND vivo'
+  results <- topicSearch(queried_string, max_results = 500)
+  results <- topicSearchByDate(queried_string, 999, 1995, 2023)
+  
+  #query by pubmed id
   pubmed_id <- 37443298
+  
+  #query by doi
+  dois <- c("10.1038/s41370-023-00582-6", 
+           '10.21037/jtd-2021-23', 
+           '10.1016/j.hrtlng.2019.09.002')
+  results <- search_by_doi(dois)
+  
   ##batch search
   pubmed_ids <- c(37443298)
   pubs <- read.csv('input/arnot_pubs.csv', header = T)
@@ -435,9 +446,7 @@ test_functions <- function() {
     prefix = 'test_'
   )
   
-  ##search based on doi
-  doi_id <- '10.1016/j.hrtlng.2019.09.002'
-  doi_search <- search_by_doi(doi_id)
+  
   
   
   
