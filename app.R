@@ -5,7 +5,9 @@ library(DT)
 #Importing helper functions
 source(file = 'pubmed.R', local = T)
 
-ui <- fluidPage(titlePanel("PubMed Searches"),
+
+
+ui <- fluidPage(titlePanel("PubMed Searches"),#####-----
                 mainPanel(tabsetPanel(
                   id = 'options',
                   tabPanel(
@@ -15,13 +17,13 @@ ui <- fluidPage(titlePanel("PubMed Searches"),
                       label = 'PubMed ID',
                       value = 10611141
                     ),
-                    radioButtons(
-                      inputId = 'search_type',
-                      label = 'Choose Search Type',
-                      choices = c("Entire record" = 'entire',
-                                  'Abstract only' = 'abstract'),
-                      inline = T
-                    ),
+                    # radioButtons(
+                    #   inputId = 'search_type',
+                    #   label = 'Choose Search Type',
+                    #   choices = c("Entire record" = 'entire',
+                    #               'Abstract only' = 'abstract'),
+                    #   inline = T
+                    # ),
                     actionButton(inputId = 'submit_search_bttn',
                                  label = 'Retrieve Publication'),
                     hr(),
@@ -64,20 +66,17 @@ server <- function(input, output, session) {
   
   #Pmid search
   observeEvent(input$submit_search_bttn, {
-    req(input$pubmed_id, input$search_type)
+    req(input$pubmed_id)
     output$pmid_query <-
       renderUI(shiny::tags$h2(paste0(
-        'Searching PubMed ID ', input$pubmed_id
+        'Searching PubMed ID: ', input$pubmed_id
       )))
     
     output$pmid_results <- renderUI({
       results <- data.frame()
-      if (input$search_type == 'abstract') {
-        results <- data.frame(Abstract = getPubMedAbstract(input$pubmed_id))
-      } else {
-        results <- getPubMedInfo(input$pubmed_id)
-      }
-      renderTable(t(results), rownames = T, colnames = F)
+      res <- getPubMedInfo(input$pubmed_id, 'pubmed_id')
+      results <- format_results_xml(res)
+      DT::renderDT(t(results), colnames = F)
     })
   })
   
@@ -100,10 +99,21 @@ server <- function(input, output, session) {
   
   # Author Search
   observeEvent(input$author_search_bttn,{
-    req(input$)
-  })
-  
-}
+     req(input$author_search)
+    input$author_query <-
+      renderUI(shiny::tags$h2(paste0(
+        'Searching Author: ', input$author_search
+      )))
+    
+    output$pmid_results <- renderUI({
+      results <- data.frame()
+      res <- getPubMedInfo(input$pubmed_id, 'author')
+      results <- format_results_xml(res)
+      DT::renderDT(t(results), colnames = F)
+    })
+   })
+   
+ }
 
 # Run the application
 shinyApp(ui = ui, server = server)
