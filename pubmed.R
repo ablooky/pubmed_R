@@ -14,21 +14,30 @@ library(tidyverse)
 
 #Functions
 
-# Search by pubmed_id
-# Retrieve article info information using pubmed_id
+#' Search Pubmed
+#'
+#' @param query string 
+#' @param search_type specfiies the kind of pubmed search performed. Can be 'pubmed_id' or 'author'.
+#' @return an xml object 
 getPubMedInfo <- function(query = NA,
                           search_type = 'pubmed_id') {
+  
+  # retmax maximum number of records retrieved per search
   retmax <- 1
   
+  #if query field is populated, set retmax
   if (!is.na(query)) {
+    #for a pmid search
     if (search_type == 'pubmed_id') {
       retmax <- 1
     }
+    #for an author search
     if (search_type == 'author') {
       retmax <- 999
     }
   }
   
+  #perform pubmed search
   res <- get_pubmed_ids(query)
   output <- fetch_pubmed_data(res, 0, retmax, format = "xml")
   
