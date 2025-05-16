@@ -21,7 +21,7 @@ getPubMedInfo <- function(query = NA,
                           search_type = 'pubmed_id') {
   
   # retmax maximum number of records retrieved per search
-  retmax <- 1
+  retmax <- NA
   
   #if query field is populated, set retmax
   if (!is.na(query)) {
@@ -37,7 +37,7 @@ getPubMedInfo <- function(query = NA,
   
   #perform pubmed search
   res <- get_pubmed_ids(query)
-  output <- fetch_pubmed_data(res, 0, retmax, format = "xml")
+  output <- fetch_pubmed_data(res, 0, retmax = retmax, format = "xml")
   
   return(output)
   
@@ -52,6 +52,7 @@ fn_format_results_xml <- function(results) {
   
   # data frame used to store parsed data
   formatted_output <- data.frame()
+  doc_num<-0
   
   #write xml output into a file
   temp_filename <- "output/output.xml"
@@ -62,6 +63,7 @@ fn_format_results_xml <- function(results) {
   # Read the XML file
   xml_data <- read_xml(temp_filename)
   articles<-xml_find_all( xml_data, "//PubmedArticle")
+  
   #number of articles
   doc_num <- length(xml_find_all(xml_data, "//PubmedArticle"))
   print(doc_num)
@@ -70,7 +72,7 @@ fn_format_results_xml <- function(results) {
   for (i in seq_along(articles)) {
 
     print(i)
-    article<-articles[[i]]
+    article<-articles[i]
     pmid <- xml_find_first(article, ".//PMID") %>% xml_text()
     print(paste0("Processing article ", i, ": PMID ", pmid))
     
@@ -139,7 +141,7 @@ fn_format_results_xml <- function(results) {
   }
   
   if (doc_num == 1) {
-    print('here')
+    #print('here')
     formatted_output <- data.frame(t(formatted_output))
   }
 
@@ -148,5 +150,7 @@ fn_format_results_xml <- function(results) {
   return(formatted_output)
 }
 
-t<-getPubMedInfo('Arnot, JA', 'author')
+#t<-getPubMedInfo('Arnot, JA', 'author')
+t<-getPubMedInfo('10611141', 'pubmed_id')
 w<-fn_format_results_xml(t)
+w

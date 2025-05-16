@@ -17,13 +17,7 @@ ui <- fluidPage(titlePanel("PubMed Searches"),#####-----
                       label = 'PubMed ID',
                       value = 10611141
                     ),
-                    # radioButtons(
-                    #   inputId = 'search_type',
-                    #   label = 'Choose Search Type',
-                    #   choices = c("Entire record" = 'entire',
-                    #               'Abstract only' = 'abstract'),
-                    #   inline = T
-                    # ),
+                  
                     actionButton(inputId = 'submit_search_bttn',
                                  label = 'Retrieve Publication'),
                     hr(),
@@ -61,7 +55,7 @@ ui <- fluidPage(titlePanel("PubMed Searches"),#####-----
 
 
 server <- function(input, output, session) {
-  #print('here')
+  
   output$pmid_query <- renderUI(shiny::tags$h2(''))
   
   #Pmid search
@@ -73,10 +67,14 @@ server <- function(input, output, session) {
       )))
     
     output$pmid_results <- renderUI({
-      results <- data.frame()
+      message(input$pubmed_id)
+      #results <- data.frame()
       res <- getPubMedInfo(input$pubmed_id, 'pubmed_id')
       results <- format_results_xml(res)
-      DT::renderDT(t(results), colnames = F)
+      #print(results)
+      DT::renderDT(results, colnames = F
+                   #options=list(pageLength=1)
+                   )
     })
   })
   
@@ -100,14 +98,14 @@ server <- function(input, output, session) {
   # Author Search
   observeEvent(input$author_search_bttn,{
      req(input$author_search)
-    input$author_query <-
+    output$author_query <-
       renderUI(shiny::tags$h2(paste0(
         'Searching Author: ', input$author_search
       )))
     
-    output$pmid_results <- renderUI({
+    output$author_results <- renderUI({
       results <- data.frame()
-      res <- getPubMedInfo(input$pubmed_id, 'author')
+      res <- getPubMedInfo(input$author_search, 'author')
       results <- format_results_xml(res)
       DT::renderDT(t(results), colnames = F)
     })
