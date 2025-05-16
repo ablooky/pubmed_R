@@ -619,3 +619,47 @@ S4_to_dataframe <- function(s4obj) {
   lst <- lapply(nms, function(nm) slot(s4obj, nm))
   as.data.frame(setNames(lst, nms))
 }
+
+
+#' Format authors from xml results
+#' 
+#' @param article xml object
+#' @return outputs a list of (1) a string and (2) a data frame containing author information
+
+get_authors_details_xml <- function(article) {
+  pmid <- xml_find_first(article, "//PMID") %>% xml_text()
+  
+  # Extract author information
+  authors <- xml_find_all(article, "//Author")
+  last_names <- xml_find_first(authors, ".//LastName") %>% xml_text()
+  first_names <- xml_find_first(authors, ".//ForeName") %>% xml_text()
+  initials <- xml_find_first(authors, ".//Initials") %>% xml_text()
+  
+  #String format
+  author_names <- sapply(authors, function(author) {
+    paste(last_names, first_names)
+  })
+  
+  # Extract author details into a data frame
+  authors_df <- data.frame(
+    PubMed_Id = NA,
+    'First_Author' = NA,
+    'Authors' = NA
+  )
+  first_author <- paste0(last_names[1], ",", initials[1], ' et al.')
+  
+  all_authors <- c()
+  if (length(authors) >= 1) {
+    for (author in 1:length(authors)) {
+      #author_string<-paste0(last_names[author], ",", first_names[author],'.')
+      initialss <- paste(unlist(strsplit(initials[author], '?')), collapse =
+                           '. ')
+      author_string <- paste0(last_names[author], ",", initialss, '.')
+      all_authors <- c(all_authors, author_string)
+    }
+    all_authors <- paste(all_authors, collapse = ', ')
+  }
+  authors_df[1, ] <- c(pmid, first_author, all_authors)
+  
+  return(list('dataframe' = authors_df, 'string' = author_names))
+}
