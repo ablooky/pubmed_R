@@ -43,8 +43,11 @@ getPubMedInfo <- function(query = NA,
   
 }
 
-# Format results
-# output_type can be 'text', 'abstract'
+#' Format pubmed search results
+#'
+#' @param results in an xml object
+#' @return a data frame of results
+#' @example fn_format_results_xml(getpubMedInfo('Arnot','author'))
 fn_format_results_xml <- function(results) {
   
   # data frame used to store parsed data
@@ -63,11 +66,11 @@ fn_format_results_xml <- function(results) {
   doc_num <- length(xml_find_all(xml_data, "//PubmedArticle"))
   print(doc_num)
   #iterate and parse through every record (result)
-#  for (i in seq_along(articles)) {
-  for (i in 1:5) {
+  
+  for (i in seq_along(articles)) {
+
     print(i)
     article<-articles[[i]]
-    #article <- xml_child(articles,search=i,ns=xml_ns(articles))
     pmid <- xml_find_first(article, ".//PMID") %>% xml_text()
     print(paste0("Processing article ", i, ": PMID ", pmid))
     
@@ -82,9 +85,8 @@ fn_format_results_xml <- function(results) {
     
     # Extract author information
     authors <- xml_find_all(article, ".//Author")
-    
+
     authors_df<-data.frame()
-    
     for(n in seq_along(authors)){
       author<-authors[n]
       last_names <- xml_find_first(author, ".//LastName") %>% xml_text()
@@ -93,7 +95,7 @@ fn_format_results_xml <- function(results) {
       authors_df<-bind_rows(authors_df, data.frame(last_names, first_names, initials))
     }
     
-    
+    ## Collapse authors
     all_authors <- c()
     if (nrow(authors_df) >= 1) {
       for (author in 1:nrow(authors_df)) {
@@ -103,13 +105,7 @@ fn_format_results_xml <- function(results) {
       }
       all_authors <- paste(all_authors, collapse = ', ')
     }
-   # all_authors
-    
-    
-    
-    # authors <- get_authors_details_xml(article)
-    # author_names <- paste(authors[['string']], collapse = ', ')
-    # 
+   
     # Extract MeSH terms
     mesh_headings <- xml_find_all(article, ".//MeshHeading")
     mesh_terms<-NA
@@ -121,14 +117,14 @@ fn_format_results_xml <- function(results) {
       mesh_terms <- paste(sort(mesh_terms), collapse = '; ')
     }
     
-    
     #abstract
     abstract <- xml_find_first(article, ".//AbstractText") %>% xml_text()
     
+    #dois
     doi_node <- xml_find_first(article, ".//ArticleId[@IdType='doi']")
     doi <- if (!is.null(doi_node)) xml_text(doi_node) else NA
     
-    # Create a comprehensive data frame
+    # Output
     one_row <- data.frame(
       pmid = pmid,
       doi = doi,
@@ -141,6 +137,7 @@ fn_format_results_xml <- function(results) {
     )
     formatted_output <- bind_rows(formatted_output, one_row)
   }
+  
   if (doc_num == 1) {
     print('here')
     formatted_output <- data.frame(t(formatted_output))
