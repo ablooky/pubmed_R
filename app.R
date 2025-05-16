@@ -29,7 +29,7 @@ ui <- fluidPage(titlePanel("PubMed Searches"),#####-----
                     textInput(
                       inputId = 'author_search',
                       label = 'Author Name',
-                      value = 'Arnot, JA'
+                      value = 'Looky,A'
                     ),
                    
                     actionButton(inputId = 'author_search_bttn',
@@ -69,8 +69,8 @@ server <- function(input, output, session) {
     output$pmid_results <- renderUI({
       message(input$pubmed_id)
       #results <- data.frame()
-      res <- getPubMedInfo(input$pubmed_id, 'pubmed_id')
-      results <- format_results_xml(res)
+      res <- fn_getPubMedInfo(input$pubmed_id, 'pubmed_id')
+      results <- fn_format_results_xml(res)
       #print(results)
       DT::renderDT(results, colnames = F
                    #options=list(pageLength=1)
@@ -105,9 +105,11 @@ server <- function(input, output, session) {
     
     output$author_results <- renderUI({
       results <- data.frame()
-      res <- getPubMedInfo(input$author_search, 'author')
-      results <- format_results_xml(res)
-      DT::renderDT(t(results), colnames = F)
+      res <- fn_getPubMedInfo(input$author_search, 'author')
+      results <- fn_format_results_xml(res)
+      results_without_abstract <- results %>%
+        select(-c(abstract))
+      DT::renderDT(results_without_abstract, colnames = F)
     })
    })
    

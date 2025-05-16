@@ -1,7 +1,7 @@
 #code to extract and format pubmed references from ncbi through R.
-library(plyr)
-library(RISmed)
-library(data.table)
+# library(plyr)
+# library(RISmed)
+# library(data.table)
 # Load required libraries
 library(xml2)  # For XML parsing
 library(easyPubMed)
@@ -15,9 +15,9 @@ library(openxlsx)
 #' @param query string 
 #' @param search_type specfiies the kind of pubmed search performed. Can be 'pubmed_id' or 'author'.
 #' @return an xml object 
-#' @example getPubMedInfo('3568465', 'pubmed_id')
-#' @example getpubMedInfo('Arnot','author')
-getPubMedInfo <- function(query = NA,
+#' @example fn_getPubMedInfo('3568465', 'pubmed_id')
+#' @example fn_getPubMedInfo('Arnot','author')
+fn_getPubMedInfo <- function(query = NA,
                           search_type = 'pubmed_id') {
   
   # retmax maximum number of records retrieved per search
@@ -47,7 +47,7 @@ getPubMedInfo <- function(query = NA,
 #'
 #' @param results in an xml object
 #' @return a data frame of results
-#' @example fn_format_results_xml(getpubMedInfo('Arnot','author'))
+#' @example fn_format_results_xml(fn_getPubMedInfo('Arnot','author'))
 fn_format_results_xml <- function(results) {
   
   # data frame used to store parsed data
@@ -150,7 +150,7 @@ fn_format_results_xml <- function(results) {
   return(formatted_output)
 }
 
-#t<-getPubMedInfo('Arnot, JA', 'author')
-t<-getPubMedInfo('10611141', 'pubmed_id')
+#t<-fn_getPubMedInfo('Arnot, JA', 'author')
+t<-fn_getPubMedInfo('10611141', 'pubmed_id')
 w<-fn_format_results_xml(t)
 w
