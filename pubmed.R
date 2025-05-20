@@ -33,6 +33,10 @@ fn_getPubMedInfo <- function(query = NA,
     if (search_type == 'author') {
       retmax <- 999
     }
+    #for an author search
+    if (search_type == 'topic') {
+      retmax <- length(query)
+    }
   }
   
   #perform pubmed search
@@ -150,6 +154,102 @@ fn_format_results_xml <- function(results) {
   return(formatted_output)
 }
 
+#search some topic on PubMed
+#it is recommended to limit max_results to 999
+fn_topicSearch <- function(query = query,
+                        max_results = 100) {
+  print(paste0('Topic search: ', query, '...'))
+  res_search <- EUtilsSummary(query, type = 'esearch', db = 'pubmed')
+  pmid_results <- res_search@PMID
+  res_records <- EUtilsGet(pmid_results[1:max_results])
+  
+   selected_names <- c(
+      "PMID",
+      "YearArticleDate",
+      "MonthArticleDate",
+      "DayArticleDate",
+      "YearPubmed",
+      "MonthPubmed" ,
+      "DayPubmed",
+      "ISSN" ,
+      "Title" ,
+      "ArticleTitle",
+      "AbstractText",
+      "Language"  ,
+      "PublicationType"  ,
+      "PublicationStatus" ,
+      "ArticleId" ,
+      "DOI" ,
+      "Volume" ,
+      "Issue",
+      "MedlinePgn" ,
+      "Country"
+    )
+    
+    temp_df <- lapply(selected_names, function(nm) slot(res_records, nm))
+    temp_df<-as.data.frame(setNames(temp_df, selected_names))
+ 
+    #parsing Authors
+    
+    authors_list <- res_records@Author
+    authors <-
+      data.frame('Authors' = NA,
+                 'First_Author' = NA,
+                 'Pubmed_id' <- NA)
+    if (length(authors_list) >= 1) {
+      for (i in 1:length(authors_list)) {
+        print(i)
+        publication_id <- names(res_records@Author)[[i]]
+        publication <- authors_list[[i]]
+       if(length(publication) == 1 && is.na(publication[1])){
+          authors[i,] <- c(NA, NA, publication_id)
+        }
+        #(is.na(publication) == F && nrow(publication) > 0){
+        else { 
+         first_author <- paste0(publication['Author', 'LastName'], ',',
+                                 publication['Author', 'Initials'], ' et al.')
+          all_authors <- c()
+          for (j in 1:nrow(publication)) {
+            all_authors <- c(all_authors,
+                             paste0(publication[j, 'LastName'], ',',
+                                    publication[j, 'Initials']))
+          }
+          all_authors <- paste(all_authors, collapse = ', ')
+          #authors[i, ] <- c(all_authors, first_author, publication_id)
+          authors[i,] <- c(all_authors, first_author, publication_id)
+        }
+       
+      
+      }
+    }
+    names(authors)<-c("Authors",  'First_Author',"PMID")
+    merged_df<-inner_join(temp_df,authors, by = 'PMID')
+
+  formatted_df<-merged_df %>% 
+    mutate(
+           title = ifelse(is.na(Title), ArticleTitle, Title),
+           journal = NA, 
+           publication_date = paste0(YearArticleDate, '-', MonthArticleDate, 
+                                     '-', DayArticleDate)
+           ) %>%
+    rename(pmid = PMID, 
+           authors = Authors,
+           abstract = AbstractText,
+           doi = DOI) %>%
+    select(-c(YearArticleDate, MonthArticleDate, DayArticleDate,
+              ISSN, Title, ArticleTitle, PublicationStatus ,
+              ArticleId, YearPubmed, MonthPubmed, DayPubmed
+              )) %>%
+    select(c(pmid, doi, First_Author, title, 
+             journal,publication_date,Volume, Issue,
+             Language, PublicationType,
+             authors, abstract))
+  return(formatted_df)
+  
+}
+query<-'in vitro biotransformation half-life rat pesticides'
+max_results<-100
+t<-fn_topicSearch(query, max_results)
 #t<-fn_getPubMedInfo('Arnot, JA', 'author')
 t<-fn_getPubMedInfo('10611141', 'pubmed_id')
 w<-fn_format_results_xml(t)
